@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FlashTick: Flashcard Practice - SRS Learning</title>
     <meta name="apple-mobile-web-app-title" content="FlashTick">
-    <!-- <meta name="apple-mobile-web-app-capable" content="yes"> -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="manifest" href="manifest.json">
     <!-- Importing Nunito for that friendly, rounded look -->
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -1528,27 +1528,61 @@
 
         // ===== SPREADSHEET MANAGEMENT =====
         async function promptForSpreadsheet() {
-            const sheetUrl = prompt(
-                '📊 Enter your Google Sheets URL:\n\n' +
-                'Your sheet must have:\n' +
-                '• Header in Row 1\n' +
-                '• Data starting from Row 2\n\n' +
-                'Column order (names can be anything):\n' +
-                '1. Front (Question/Term)\n' +
-                '2. Back (Answer/Definition)\n' +
-                '3. Last Practice Date\n' +
-                '4. SRS Stage (0-8)\n' +
-                '5. Failed Count\n\n' +
-                'Paste the full URL here:'
-            );
+            const modalHTML = `
+                <div id="spreadsheetModal" class="modal">
+                    <div class="modal-content">
+                        <h2>📊 Connect Your Google Sheet</h2>
+                        <p style="text-align: left; color: var(--text-light); margin-bottom: 20px;">
+                            Your sheet must have:
+                        </p>
+                        <ul style="text-align: left; color: var(--text-light); margin-bottom: 20px; padding-left: 20px;">
+                            <li>Header in Row 1</li>
+                            <li>Data starting from Row 2</li>
+                        </ul>
+                        <p style="text-align: left; color: var(--text-light); margin-bottom: 20px; font-size: 14px;">
+                            <strong>Column order (names can be anything):</strong><br>
+                            1. Front (Question/Term)<br>
+                            2. Back (Answer/Definition)<br>
+                            3. Last Practice Date<br>
+                            4. SRS Stage (0-8)<br>
+                            5. Failed Count
+                        </p>
+                        <div class="input-group">
+                            <label>Paste your Google Sheets URL:</label>
+                            <input type="url" id="sheetUrlInput" 
+                                placeholder="https://docs.google.com/spreadsheets/d/..." 
+                                style="width: 100%;">
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button onclick="cancelSpreadsheetPrompt()" class="btn btn-secondary" style="flex: 1;">
+                                Cancel
+                            </button>
+                            <button onclick="saveSpreadsheetUrl()" class="btn btn-primary" style="flex: 1;">
+                                Connect
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // Focus the input
+            setTimeout(() => {
+                document.getElementById('sheetUrlInput').focus();
+            }, 100);
+        }
+
+        async function saveSpreadsheetUrl() {
+            const input = document.getElementById('sheetUrlInput');
+            const sheetUrl = input.value.trim();
             
             if (!sheetUrl) {
                 alert('⚠️ You need a spreadsheet to continue!');
                 return;
             }
             
-            const sheetMatch = sheetUrl.match(/\/spreadsheets\/(?:u\/\d+\/)?d\/([a-zA-Z0-9-_]+)/);
-            const gidMatch = sheetUrl.match(/[#&?]gid=([0-9]+)/);
+            const sheetMatch = sheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+            const gidMatch = sheetUrl.match(/[#&]gid=([0-9]+)/);
             
             if (sheetMatch) {
                 spreadsheetId = sheetMatch[1];
@@ -1557,12 +1591,27 @@
                 localStorage.setItem('spreadsheetId', spreadsheetId);
                 localStorage.setItem('sheetGid', sheetGid);
                 
+                // Remove modal
+                const modal = document.getElementById('spreadsheetModal');
+                if (modal) modal.remove();
+                
                 await loadVocabulary();
                 showSection('menuSection');
                 updateMenuState();
             } else {
                 alert('❌ Invalid Google Sheets URL. Please try again.');
-                await promptForSpreadsheet();
+                input.value = '';
+                input.focus();
+            }
+        }
+
+        function cancelSpreadsheetPrompt() {
+            const modal = document. getElementById('spreadsheetModal');
+            if (modal) modal.remove();
+            
+            // If user cancels and has no spreadsheet, show auth section
+            if (!spreadsheetId) {
+                showSection('authSection');
             }
         }
 
