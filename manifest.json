@@ -2,12 +2,12 @@
   "name": "FlashTick: Flashcard Practice - SRS Learning",
   "short_name": "FlashTick",
   "description": "Master any subject with smart spaced repetition. A beautiful flashcard application with Tick-8 SRS algorithm for effective learning.",
-  "start_url": "/",
+  "start_url": "/flashtick/",
   "display": "standalone",
   "theme_color": "#1CB0F6",
   "background_color": "#FEFEFE",
   "orientation": "any",
-  "scope": "/",
+  "scope": "/flashtick/",
   "icons": [
     {
       "src": "https://raw.githubusercontent.com/PFarahani/flashtick/refs/heads/main/assets/icon_144.png",
