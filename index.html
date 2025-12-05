@@ -1546,7 +1546,7 @@
                 return;
             }
             
-            const sheetMatch = sheetUrl.match(/\/spreadsheets\/(?:u\/\d+\/)? d\/([a-zA-Z0-9-_]+)/);
+            const sheetMatch = sheetUrl.match(/\/spreadsheets\/(?:u\/\d+\/)?d\/([a-zA-Z0-9-_]+)/);
             const gidMatch = sheetUrl.match(/[#&?]gid=([0-9]+)/);
             
             if (sheetMatch) {
