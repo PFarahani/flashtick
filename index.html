@@ -969,6 +969,26 @@
             btn.title = theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode';
         }
 
+        // ===== AUTHENTICATION LOGIC =====
+        function ensureValidToken() {
+            const storedToken = localStorage.getItem('accessToken');
+            const tokenExpiry = localStorage.getItem('tokenExpiry');
+            
+            if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
+                accessToken = storedToken;
+                gapi.client.setToken({access_token: accessToken});
+                return true;
+            }
+            
+            // Token expired
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('tokenExpiry');
+            accessToken = null;
+            alert('⚠️ Your session expired.  Please sign in again.');
+            showSection('authSection');
+            return false;
+        }
+
         // ===== CONFIRMATION DIALOG =====
         function showConfirmDialog(message, onConfirm, onCancel) {
             const dialogHTML = `
@@ -1175,7 +1195,7 @@
             // Check if there's an active session
             if (hasActiveSession()) {
                 showConfirmDialog(
-                    'You have an unfinished session. Starting a new session will discard your current progress.  Are you sure? ',
+                    'You have an unfinished session. Starting a new session will discard your current progress. Are you sure? ',
                     () => {
                         // User confirmed - start new session
                         clearSessionState();
@@ -1504,9 +1524,16 @@
         function signIn() {
             tokenClient.callback = async (resp) => {
                 if (resp.error !== undefined) {
+                    console.error('OAuth error:', resp.error);
                     throw (resp);
                 }
+                
                 accessToken = resp.access_token;
+                
+                // Store token with expiry time (tokens typically last 1 hour)
+                const expiryTime = Date.now() + (resp.expires_in * 1000);
+                localStorage.setItem('accessToken', accessToken);
+                localStorage.setItem('tokenExpiry', expiryTime.toString());
                 
                 document.getElementById('authSection').classList.add('hidden');
                 
@@ -1525,7 +1552,6 @@
                 tokenClient.requestAccessToken({prompt: ''});
             }
         }
-
         // ===== SPREADSHEET MANAGEMENT =====
         async function promptForSpreadsheet() {
             const modalHTML = `
@@ -1588,6 +1614,9 @@
                 spreadsheetId = sheetMatch[1];
                 sheetGid = gidMatch ? gidMatch[1] : '';
                 
+                // Clear the needsSpreadsheet flag
+                localStorage.removeItem('needsSpreadsheet');
+                
                 localStorage.setItem('spreadsheetId', spreadsheetId);
                 localStorage.setItem('sheetGid', sheetGid);
                 
@@ -1606,7 +1635,7 @@
         }
 
         function cancelSpreadsheetPrompt() {
-            const modal = document. getElementById('spreadsheetModal');
+            const modal = document.getElementById('spreadsheetModal');
             if (modal) modal.remove();
             
             // If user cancels and has no spreadsheet, show auth section
@@ -1638,6 +1667,9 @@
         }
 
         async function loadVocabulary() {
+            if (!ensureValidToken()) {
+                return;
+            }
             try {
                 const sheetName = await getSheetNameFromGid(sheetGid);
                 console.log('Using sheet:', sheetName);
@@ -1816,17 +1848,49 @@
         }
 
         // ===== INITIALIZATION ON LOAD =====
-        window.addEventListener('load', function() {
-            initTheme(); // Initialize theme preference
+        window.addEventListener('load', async function() {
+            initTheme();
             
             if (!GOOGLE_CLIENT_ID) {
                 showClientIdSetup();
+                return;
+            }
+            
+            // Initialize Google APIs
+            gapiLoaded();
+            gisLoaded();
+            
+            // Wait for GAPI to initialize
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Try to restore access token from localStorage
+            const storedToken = localStorage.getItem('accessToken');
+            const tokenExpiry = localStorage.getItem('tokenExpiry');
+            
+            if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
+                // Token is still valid
+                accessToken = storedToken;
+                gapi.client.setToken({access_token: accessToken});
+                
+                document.getElementById('authSection').classList.add('hidden');
+                
+                if (!spreadsheetId) {
+                    await promptForSpreadsheet();
+                } else {
+                    await loadVocabulary();
+                    showSection('menuSection');
+                    updateMenuState();
+                }
             } else {
-                gapiLoaded();
-                gisLoaded();
+                // Token expired or doesn't exist - clear it
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('tokenExpiry');
+                accessToken = null;
+                
+                // Show sign-in screen
+                showSection('authSection');
             }
         });
-
         // ===== DYNAMIC TOOLTIP POSITIONING =====
         // This event listener automatically adjusts the position of any tooltip 
         // to ensure it stays within the browser window.
