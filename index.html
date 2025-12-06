@@ -572,6 +572,17 @@
             color: #75E022;
         }
 
+        .status-disconnected {
+            background: #FFE0E0;
+            color: var(--error);
+            border: 2px solid var(--error);
+        }
+
+        [data-theme="dark"] .status-disconnected {
+            background: rgba(255, 75, 75, 0.2);
+            color: #FF8A8A;
+        }
+
         .session-info {
             background: #FFF5D1;
             border: 2px solid #FFC800;
@@ -1710,6 +1721,14 @@
             } catch (err) {
                 console.error('Error loading content:', err);
                 alert('❌ Error loading content. Check your spreadsheet and try again.\n\n' + err.message);
+                
+                // Update connection status to show error
+                const statusBadge = document.getElementById('connectionStatus');
+                if (statusBadge) {
+                    statusBadge.textContent = '✗ Not Connected';
+                    statusBadge.classList.remove('status-connected');
+                    statusBadge.classList.add('status-disconnected');
+                }
             }
         }
 
